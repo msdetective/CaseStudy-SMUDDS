@@ -1,0 +1,119 @@
+---
+title: "CodeBook"
+author: "Saloni Bhatia"
+date: "August 7, 2019"
+output: html_document
+---
+---
+
+title: "Codebook.rmd"
+
+author: "Saloni Bhatia"
+
+date: "8/16/2019"
+
+output: html_document
+
+---
+
+
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = FALSE)
+install.packages("kableExtra")
+install.packages("knitr")
+install.packages("readxl")
+
+library(knitr)
+
+library(kableExtra)
+
+
+```
+
+
+
+## DDS Analytics Talent Management Study Codebook
+
+
+
+This codebook provides an overview of the data as it was received and any modifications that were required to support our analysis. It is a documentation of the variables in the data set, any normalization or modifications that were made, and should support replication of our analysis. 
+
+
+
+### Data Files Received
+
+
+
+DDSAnalytics provided unique(Consulting) with a Microsoft Excel (.xlsx) file titled CaseStudy2-data.xlsx. 
+
+
+
+```{r}
+
+df <- read.csv("C:/SMU/DoingDatascience/Casestudy/CaseStudy2-data.csv")
+
+```
+
+
+
+### Initial Data Structure
+
+
+
+The data contained within the provided table has the following variable names and types: 
+
+<br>
+
+
+
+```{r}
+kable(t(lapply(df,class)))
+
+
+#kable_styling(bootstrap_options = c("striped", "hover"))
+
+#kable(t(lapply(cs2Raw,class)))%>%
+
+ # kable_styling()%>%
+
+ # scroll_box(height = 100, width = 500)
+
+```
+
+
+
+### Test Models
+
+
+
+A number of test models were created to help identify features provided in the data set that contribute to Attrition rates within the population. 
+
+
+
+#### Model 1: Logistic Regression
+
+
+
+A logistic regression model to predict whether an employee -- based on provided features -- would be in class (AttritionCode = 1) or out of Class. This model accepts all of the provided categorical and continuous variables and determines their impact on Attrition. The model is un-normalized and unweighted and provides only a first step analysis. Despite this, however, it is capable of achieving accuracy rates of 87% with Precision values of 90.7% and Recall of 94.9%. 
+
+
+
+This model is described by the statement: 
+
+
+
+```{r eval=FALSE, echo=TRUE}
+
+AttritionCode ~ Age + JobRole + StockOptionLevel + WorkLifeBalance + 
+
+              YearsSinceLastPromotion + EnvironmentSatisfaction + JobInvolvement + 
+
+              OverTime + RelationshipSatisfaction + YearsAtCompany + YearsWithCurrManager + 
+
+              BusinessTravel + DistanceFromHome + Gender + MaritalStatus + 
+
+              NumCompaniesWorked + YearsInCurrentRole
+
+```

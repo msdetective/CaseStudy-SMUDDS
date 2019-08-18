@@ -1,0 +1,26 @@
+---
+title: "ReadMe"
+author: "Saloni Bhatia"
+date: "August 7, 2019"
+output: html_document
+---
+
+#Scenario
+DDSAnalytics is an analytics company that specializes in talent management solutions for Fortune 100 companies. Talent management is defined as the iterative process of developing and retaining employees. It may include workforce planning, employee training programs, identifying high-potential employees and reducing/preventing voluntary employee turnover (attrition). To gain a competitive edge over its competition, DDSAnalytics is planning to leverage data science for talent management. The executive leadership has identified predicting employee turnover as its first application of data science for talent management. Before the business green lights the project, they have tasked your data science team to conduct an analysis of existing employee data.
+
+We have been given a dataset (CaseStudy2-data.csv) to do a data analysis to identify factors that lead to attrition. We need to identify the top three factors that contribute to turnover. The business is also interested in learning about any job role specific trends that may exist in the data set (e.g., "Data Scientists have the highest job satisfaction").
+
+#Purpose
+To support the analysis of DDSAnalytics Human Resources data in order to:
+1)Identify the leading causes of employee attrition within the company.
+2)Identify trends specific to job roles within the company.
+
+#Files Contained in This Repository:
+The following files can be found in support of this analysis
+1) CaseStudy2-data.xlsx -- Contains original data set as provided by the client.
+2) CaseStudy2Data.csv -- A csv formatted version of the data.
+3) Codebook.rmd -- An Rmarkdown file containing descriptions of the data and any derived variables / models used in analysis
+4) Codebook.html -- An HTML representation of the Codebook
+5) DDS Analytics Final Presentation.pptx -- The final presentation as provided to the client.
+6) DDSAnalytics_Analysis.Rmd -- The final analysis as completed by the team.
+7) DDSAnalytics_Analysis.html -- HTML version of the final analysis.

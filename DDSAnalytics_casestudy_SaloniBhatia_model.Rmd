@@ -1,0 +1,984 @@
+---
+title: "DDSAnalytics_CaseStudy_SaloniBhatia"
+author: "Saloni Bhatia"
+date: "August 18, 2019"
+output: html_document
+---
+---
+
+
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+<style type="text/css">
+    h3 {
+
+      text-align: center;
+       }
+    hr {
+        border-color: #292F33;
+        border-width: 1px;
+        }
+</style>
+
+##**Introduction**
+In response to DDSAnalytics request for support in identifying factors contributing to attrition and any other possible trends associated with job roles within the work force and provided data set. In the conduct of analysis, I have employed a number of exploratory data analysis techniques and are confident that we have unmasked some significant insights into these requests.
+
+## **Analysis Repository**
+All of the files, code, and presentation materials used in support of this submission are available to DDS Analytics at the following GitHub repository:
+#### GitHub Repo: https://github.com/
+#### Youtube Presentation: 
+### Referenced https://rpubs.com/riazakhan94/naive_bayes_classifier_e1071
+### http://www.sthda.com/english/articles/37-model-selection-essentials-in-r/154-stepwise-regression-essentials-in-r/
+
+####Downloading and Importing the Data
+
+```{r Data}
+
+# getwd()
+#Downloading the data
+# library(downloader)
+
+
+# list.files()
+#Importing the raw case study file
+
+df_Attrition <-read.csv("C:/SMU/DoingDatascience/Casestudy2/CaseStudy2-data.csv", header = TRUE, sep = ",")
+
+head(df_Attrition)
+
+str(df_Attrition)
+
+#Importing Attrition Validation File
+
+df_AttritionPrediction <-read.csv("C:/SMU/DoingDatascience/Casestudy2/CaseStudy2CompSet No Attrition.csv", header = TRUE, sep = ",")
+
+str(df_AttritionPrediction)
+
+#Importing Salary Prediction File
+
+df_IncomePrediction <-read.csv("C:/SMU/DoingDatascience/Casestudy2/CaseStudy2CompSet No Salary.csv", header = TRUE)
+
+str(df_IncomePrediction)
+
+head(df_IncomePrediction)
+
+```
+
+
+
+##Initial Exploratory Plots
+
+```{r }
+
+library(manipulate)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(purrr)
+library(plyr)
+library(scales)
+library(magrittr)
+library(knitr)
+library(kableExtra)
+library(caret)
+
+```
+
+## **Workforce Overview / Initial Statistics**
+Being unfamiliar with the DDSAnalytics workforce or structure, began analysis with a robust examination of the operating construct, workforce composition, job roles, departments and other aspects contained within the data. Let's begin cleaning the data first and casting datatypes.
+
+
+##Cleaning Datasets  
+####The following variables can be removed due to lack of variance (same answer recorded for each record)
+
+
+- Employee Number (1055)
+
+- Over18 (Y)
+
+- EmployeeCount (1)
+
+- StandardHours (80)
+
+####Several variables classified as integars could also be seen as categorical and will be converted to factor types
+
+```{r }
+
+##Removing Over18 variable since only 1 level of factor & EmployeeCount & StandardHours
+
+df_Attrition2 <- df_Attrition[,-c(1, 11, 23, 28)]
+
+str(df_Attrition2)
+
+#Add Attrition Code
+
+df_Attrition2$AttritionCode <- 0
+
+df_Attrition2[df_Attrition2$Attrition == "Yes", ]$AttritionCode <- 1
+
+
+
+#Casting all Rating Variables as Factors
+
+df_Attrition2$Education <- as.factor(df_Attrition2$Education)
+
+df_Attrition2$EnvironmentSatisfaction <- as.factor(df_Attrition2$EnvironmentSatisfaction)
+
+df_Attrition2$JobInvolvement <- as.factor(df_Attrition2$JobInvolvement)
+
+df_Attrition2$JobLevel <- as.factor(df_Attrition2$JobLevel)
+
+df_Attrition2$JobSatisfaction <- as.factor(df_Attrition2$JobSatisfaction)
+
+df_Attrition2$PerformanceRating <- as.factor(df_Attrition2$PerformanceRating)
+
+df_Attrition2$RelationshipSatisfaction <- as.factor(df_Attrition2$RelationshipSatisfaction)
+
+df_Attrition2$StockOptionLevel <- as.factor(df_Attrition2$StockOptionLevel)
+
+df_Attrition2$TrainingTimesLastYear <- as.factor(df_Attrition2$TrainingTimesLastYear)
+
+df_Attrition2$WorkLifeBalance <- as.factor(df_Attrition2$WorkLifeBalance)
+
+#Checking for NAs
+colSums(is.na(df_Attrition2))
+
+
+
+#cleaning Validation Table
+
+##Removing Over18 variable since only 1 level of factor & EmployeeCount & StandardHours
+
+df_AttritionPrediction <- df_AttritionPrediction[,-c( 10, 22, 27)]
+
+str(df_AttritionPrediction)
+
+#Casting Rating Variables as Factors
+
+df_AttritionPrediction$Education <- as.factor(df_AttritionPrediction$Education)
+
+df_AttritionPrediction$EnvironmentSatisfaction <- as.factor(df_AttritionPrediction$EnvironmentSatisfaction)
+
+df_AttritionPrediction$JobInvolvement <- as.factor(df_AttritionPrediction$JobInvolvement)
+
+df_AttritionPrediction$JobLevel <- as.factor(df_AttritionPrediction$JobLevel)
+
+df_AttritionPrediction$JobSatisfaction <- as.factor(df_AttritionPrediction$JobSatisfaction)
+
+df_AttritionPrediction$PerformanceRating <- as.factor(df_AttritionPrediction$PerformanceRating)
+
+df_AttritionPrediction$RelationshipSatisfaction <- as.factor(df_AttritionPrediction$RelationshipSatisfaction)
+
+df_AttritionPrediction$StockOptionLevel <- as.factor(df_AttritionPrediction$StockOptionLevel)
+
+df_AttritionPrediction$TrainingTimesLastYear <- as.factor(df_AttritionPrediction$TrainingTimesLastYear)
+
+df_AttritionPrediction$WorkLifeBalance <- as.factor(df_AttritionPrediction$WorkLifeBalance)
+
+
+
+#cleaning Prediction File
+
+##Removing Over18 variable since only 1 level of factor & EmployeeCount & StandardHours
+
+df_IncomePrediction <- df_IncomePrediction[,-c(  11, 22, 27)]
+
+str(df_IncomePrediction)
+
+#Casting Rating Variables as Factors
+
+df_IncomePrediction$Education <- as.factor(df_IncomePrediction$Education)
+
+df_IncomePrediction$EnvironmentSatisfaction <- as.factor(df_IncomePrediction$EnvironmentSatisfaction)
+
+df_IncomePrediction$JobInvolvement <- as.factor(df_IncomePrediction$JobInvolvement)
+
+df_IncomePrediction$JobLevel <- as.factor(df_IncomePrediction$JobLevel)
+
+df_IncomePrediction$JobSatisfaction <- as.factor(df_IncomePrediction$JobSatisfaction)
+
+df_IncomePrediction$PerformanceRating <- as.factor(df_IncomePrediction$PerformanceRating)
+
+df_IncomePrediction$RelationshipSatisfaction <- as.factor(df_IncomePrediction$RelationshipSatisfaction)
+
+df_IncomePrediction$StockOptionLevel <- as.factor(df_IncomePrediction$StockOptionLevel)
+
+df_IncomePrediction$TrainingTimesLastYear <- as.factor(df_IncomePrediction$TrainingTimesLastYear)
+
+df_IncomePrediction$WorkLifeBalance <- as.factor(df_IncomePrediction$WorkLifeBalance)
+
+```
+
+#Analysis
+The data contained records for *870* current and former employees of DDSAnalytics. These records broke down as follows.
+
+
+<!-------------------------------------------------->
+
+<!-------------- DEPARMENT BREAKDOWN --------------->
+
+<!-------------------------------------------------->
+
+```{r department_break, fig.align='center',  echo=FALSE}
+
+df_Attrition2_dep <- aggregate(df_Attrition2$EmployeeCount, by=list(df_Attrition2$Department), FUN=sum, drop=FALSE)
+
+colnames(df_Attrition2_dep) <- c("Department", "Employee Count")
+
+df_Attrition2_dep$`% of Total Employees` <- percent(df_Attrition2_dep$`Employee Count`/sum(df_Attrition2_dep$`Employee Count`))
+
+```
+
+```{r display_departments, fig.align='center', echo=FALSE, }
+options(knitr.table.format = "html") 
+
+kable(df_Attrition2_dep, row.names = F, align=c('l',rep('c', length(df_Attrition2_dep) - 1) )) %>% kable_styling(bootstrap_options = c("striped","hover"), full_width = F)
+
+```
+
+
+##Correlation Plots
+
+```{r }
+
+#Correlation Plots
+
+library(corrplot)
+
+#Only Integer Variables
+
+EmpCorrelations <- cor(df_Attrition2 %>% keep(is.integer))
+
+#corrplot(EmpCorrelations, type = "lower", diag = TRUE,title="Variable Corr Heatmap",tl.srt=45)
+
+#All Variables
+
+EmpCorrelationsAll <- cor(df_Attrition[,-c( 10, 11, 23, 28)] %>% keep(is.integer))
+
+corrplot(EmpCorrelationsAll, type = "lower", title="Variable Corr Heatmap",tl.srt=35)
+
+```
+
+
+
+##Attrition Frequencies
+
+```{r }
+
+#Creating Attrition Proportion Tables
+
+TotalAttr <- table(df_Attrition2$Attrition)
+
+BusTravAttr <- table(df_Attrition2$BusinessTravel,df_Attrition2$Attrition)
+
+DeptAttr <- table(df_Attrition2$Department,df_Attrition2$Attrition)
+
+EduFieldAttr <- table(df_Attrition2$EducationField,df_Attrition2$Attrition)
+
+GenderAttr <- table(df_Attrition2$Gender,df_Attrition2$Attrition)
+
+RoleAttr <- table(df_Attrition2$JobRole,df_Attrition2$Attrition)
+
+MaritalAttr <- table(df_Attrition2$MaritalStatus,df_Attrition2$Attrition)
+
+OverTimeAttr <- table(df_Attrition2$OverTime,df_Attrition2$Attrition)
+
+EducationAttr <- table(df_Attrition2$Education,df_Attrition2$Attrition)
+
+EnvirSatAttr <- table(df_Attrition2$EnvironmentSatisfaction,df_Attrition2$Attrition)
+
+JobInvAttr <- table(df_Attrition2$JobInvolvement,df_Attrition2$Attrition)
+
+JobLevAttr <- table(df_Attrition2$JobLevel,df_Attrition2$Attrition)
+
+JobSatAttr <- table(df_Attrition2$JobSatisfaction,df_Attrition2$Attrition)
+
+PerRatAttr <- table(df_Attrition2$PerformanceRating,df_Attrition2$Attrition)
+
+RelSatAttr <- table(df_Attrition2$RelationshipSatisfaction,df_Attrition2$Attrition)
+
+StockAttr <- table(df_Attrition2$StockOptionLevel,df_Attrition2$Attrition)
+
+NumCompaniesWorkedAttr <- table(df_Attrition2$NumCompaniesWorked,df_Attrition2$Attrition)
+
+WorkLifeAttr <- table(df_Attrition2$WorkLifeBalance,df_Attrition2$Attrition)
+
+
+#Getting Percentages
+
+TotalAttr_Prop <- prop.table(TotalAttr)
+
+BusTravAttr_Prop <- data.frame(prop.table(BusTravAttr, 1))
+
+DeptAttr_Prop <- data.frame(prop.table(DeptAttr, 1) )
+
+EduFieldAttrAttr_Prop <- data.frame(prop.table(EduFieldAttr, 1) )
+
+GenderAttr_Prop <- data.frame(prop.table(GenderAttr, 1)) 
+
+RoleAttr_Prop <- data.frame(prop.table(RoleAttr, 1) )
+
+MaritalAttr_Prop <- data.frame(prop.table(MaritalAttr, 1)) 
+
+OverTimeAttr_Prop <- data.frame(prop.table(OverTimeAttr, 1)) 
+
+
+EducationAttr_Prop <- data.frame(prop.table(EducationAttr, 1))
+
+EnvirSatAttr_Prop <- data.frame(prop.table(EnvirSatAttr, 1)) 
+
+JobInvAttr_Prop <- data.frame(prop.table(JobInvAttr, 1)) 
+
+JobLevAttr_Prop <- data.frame(prop.table(JobLevAttr, 1)) 
+
+JobSatAttr_Prop <- data.frame(prop.table(JobSatAttr, 1)) 
+
+PerRatAttr_Prop <- data.frame(prop.table(PerRatAttr, 1)) 
+
+RelSatAttr_Prop <- data.frame(prop.table(RelSatAttr, 1)) 
+
+StockAttr_Prop <- data.frame(prop.table(StockAttr, 1)) 
+
+NumCompaniesWorkedAttr_Prop <- data.frame(prop.table(NumCompaniesWorkedAttr, 1)) 
+
+WorkLifeAttr_Prop <- data.frame(prop.table(WorkLifeAttr, 1)) 
+
+
+
+####Testing significance of difference in attrition between levels of each variable  
+#"prop.test" can be used for testing the null that the proportions (probabilities of success) in several groups are the same, or that they equal certain given values. Significance is determined when Pvalue <=0.05.
+
+####A Chi-Squared test was used to compare the attrition rate between levels of each variable and test for significances
+
+prop.test(BusTravAttr, correct=FALSE) #P-value < 0.05
+
+prop.test(DeptAttr, correct=FALSE) #P-value < 0.05
+
+prop.test(EduFieldAttr, correct=FALSE) ##P-value > 0.05
+
+prop.test(GenderAttr, correct=FALSE) #P-value > 0.05
+
+prop.test(RoleAttr, correct=FALSE) ##P-value < 0.05
+
+prop.test(MaritalAttr, correct=FALSE) #P-value < 0.05
+
+prop.test(OverTimeAttr, correct=FALSE) #P-value < 0.05
+
+prop.test(EducationAttr, correct=FALSE) ##P-value > 0.05
+
+prop.test(EnvirSatAttr, correct=FALSE) #P-value < 0.05
+
+prop.test(JobInvAttr, correct=FALSE) #P-value < 0.05
+
+prop.test(JobLevAttr, correct=FALSE) #P-value < 0.05
+
+prop.test(JobSatAttr, correct=FALSE) #P-value < 0.05
+
+prop.test(PerRatAttr, correct=FALSE) #P-value > 0.05
+
+prop.test(RelSatAttr, correct=FALSE) #P-value > 0.05
+
+prop.test(StockAttr, correct=FALSE) #P-value < 0.05
+
+prop.test(NumCompaniesWorkedAttr, correct=FALSE) ##P-value < 0.05
+
+prop.test(WorkLifeAttr, correct=FALSE) #P-value < 0.05
+
+prop.test(table(df_Attrition2$Age, df_Attrition2$Attrition), correct=FALSE) ##P-value < 0.05
+
+#prop.test(table(df_Attrition2$DailyRate, df_Attrition2$Attrition), correct=FALSE) ##P-value > 0.05
+
+prop.test(table(df_Attrition2$DistanceFromHome, df_Attrition2$Attrition), correct=FALSE) ##P-value < 0.05
+
+#prop.test(table(df_Attrition2$HourlyRate, df_Attrition2$Attrition), correct=FALSE) ##P-value > 0.05
+
+#prop.test(table(df_Attrition2$MonthlyRate, df_Attrition2$Attrition), correct=FALSE) ##P-value > 0.05
+
+#prop.test(table(df_Attrition2$MonthlyIncome, df_Attrition2$Attrition), correct=FALSE) ##P-value > 0.05
+
+prop.test(table(df_Attrition2$TotalWorkingYears, df_Attrition2$Attrition), correct=FALSE) ##P-value < 0.05
+
+prop.test(table(df_Attrition2$YearsAtCompany, df_Attrition2$Attrition), correct=FALSE) ##P-value < 0.05
+
+prop.test(table(df_Attrition2$YearsInCurrentRole, df_Attrition2$Attrition), correct=FALSE) ##P-value < 0.05
+
+prop.test(table(df_Attrition2$YearsSinceLastPromotion, df_Attrition2$Attrition), correct=FALSE) ##P-value > 0.05
+
+```
+
+```{r}
+model = glm(data = df_Attrition2, formula = AttritionCode ~ BusinessTravel + Department + EducationField + Gender +JobRole + MaritalStatus + OverTime +Education + EnvironmentSatisfaction + JobInvolvement + JobLevel +JobSatisfaction + PerformanceRating + RelationshipSatisfaction +StockOptionLevel + NumCompaniesWorked +WorkLifeBalance, family = binomial(logit))
+
+importance = varImp(model)
+
+storeNames = row.names(importance)
+
+storeNames = cbind(storeNames,importance)
+
+storeNames = arrange(storeNames, -Overall)
+
+names(storeNames) = c("Variable","Importance")
+
+storeNames
+
+```
+
+
+                          Variable Importance
+1                      OverTimeYes  6.0794290
+2               NumCompaniesWorked  3.6041588
+3          YearsSinceLastPromotion  3.5370791
+4                   JobInvolvement  3.0976297
+5      JobRoleSales Representative  2.3476352
+6                  WorkLifeBalance  2.2351612
+7                 DistanceFromHome  2.0934162
+
+
+####Based on extensive testing, there does not appear to be a significant difference in the attrition rate for the following variables:
+- Training Time
+
+- Daily Rate, Hourly Rate, Monthly Income
+
+- Years with Current Manager 
+
+- Education Field or Level
+
+- Gender
+
+- Performance Rating
+
+- Relationship Satisfaction
+
+
+####The following factors appear to have the strongest impact on employee attrition:
+
+1) Overtime (*p = 1.024e-15*)
+2) Job Involvement (*p = 5.211e-09*)
+3) Job Level (*p = 2.085e-08*)
+4) Job satisfaction(*p =0.01115)
+5) Stock Option Level (*p = 3.724e-12*)
+6) Marital Status (*p = 3.379e-08*)
+7) Job Role(*p = 3.647e-10 ) 
+8) Number Companies worked(*p =0.01678)
+
+
+##Plotting Attrition Rate Percentage (where Attrition was significant)
+
+```{r }
+
+#Plotting Attrition Perctages for Categorical Variables
+
+
+ggplot(data=OverTimeAttr_Prop, aes(x=Var1, y=Freq, fill=Var2)) +
+
+  geom_bar(stat="identity", position=position_dodge()) +
+
+  theme (axis.title.x = element_blank(), plot.title = element_text(hjust = 0.5)) +
+
+  labs(fill = "Attrition") +
+
+  ggtitle("Overtime Attrition")
+  
+  
+  ggplot(data=JobInvAttr_Prop, aes(x=Var1, y=Freq, fill=Var2)) +
+
+  geom_bar(stat="identity", position=position_dodge()) +
+
+  theme (axis.title.x = element_blank(), plot.title = element_text(hjust = 0.5)) +
+
+  labs(fill = "Attrition") +
+
+  ggtitle("Job Involvement Attrition")
+  
+  
+  ggplot(data=JobLevAttr_Prop, aes(x=Var1, y=Freq, fill=Var2)) +
+
+  geom_bar(stat="identity", position=position_dodge()) +
+
+  theme (axis.title.x = element_blank(), plot.title = element_text(hjust = 0.5)) +
+
+  labs(fill = "Attrition") +
+
+  ggtitle("Job Level Attrition")
+  
+ 
+  ggplot(data=WorkLifeAttr_Prop, aes(x=Var1, y=Freq, fill=Var2)) +
+
+  geom_bar(stat="identity", position=position_dodge()) +
+
+  theme (axis.title.x = element_blank(), plot.title = element_text(hjust = 0.5)) +
+
+  labs(fill = "Attrition") +
+
+  ggtitle("Work Life Balance Attrition")
+  
+
+ggplot(data=StockAttr_Prop, aes(x=Var1, y=Freq, fill=Var2)) +
+
+  geom_bar(stat="identity", position=position_dodge()) +
+
+  theme (axis.title.x = element_blank(), plot.title = element_text(hjust = 0.5)) +
+
+  labs(fill = "Attrition") +
+
+  ggtitle("Attrition by Stock Option Level")
+
+ggplot(data=MaritalAttr_Prop, aes(x=Var1, y=Freq, fill=Var2)) +
+
+  geom_bar(stat="identity", position=position_dodge()) +
+
+  theme (axis.title.x = element_blank(), plot.title = element_text(hjust = 0.5)) +
+
+  labs(fill = "Attrition") +
+
+  ggtitle("Attrition by Marital Status")
+
+
+ggplot(data=NumCompaniesWorkedAttr_Prop, aes(x=Var1, y=Freq, fill=Var2)) +
+
+  geom_bar(stat="identity", position=position_dodge()) +
+
+  theme (axis.title.x = element_blank(), plot.title = element_text(hjust = 0.5)) +
+
+  labs(fill = "Attrition") +
+
+  ggtitle("Number of companies worked Attrition")
+
+ggplot(data=BusTravAttr_Prop, aes(x=Var1, y=Freq, fill=Var2)) +
+
+  geom_bar(stat="identity", position=position_dodge()) +
+
+  theme (axis.title.x = element_blank(), plot.title = element_text(hjust = 0.5)) +
+
+  labs(fill = "Attrition") +
+
+  ggtitle("Business Travel Attrition")
+  
+
+ggplot(data=DeptAttr_Prop, aes(x=Var1, y=Freq, fill=Var2)) +
+
+  geom_bar(stat="identity", position=position_dodge()) +
+
+  theme (axis.title.x = element_blank(), plot.title = element_text(hjust = 0.5)) +
+
+  labs(fill = "Attrition") +
+
+  ggtitle("Department Attrition")
+
+
+
+ggplot(data=RoleAttr_Prop, aes(x=Var1, y=Freq, fill=Var2)) +
+
+  geom_bar(stat="identity", position=position_dodge()) +
+
+  theme (axis.title.x = element_blank(), plot.title = element_text(hjust = 0.5)) +
+
+  labs(fill = "Attrition") +
+
+  ggtitle("Job Role Attrition") +
+
+  theme(axis.text.x=element_text(angle=90))
+
+
+
+
+
+
+#Plotting Continuous Variable Variance by Attrition
+
+ggplot(data=df_Attrition2, aes(x=Age, fill=Attrition)) + ylab("Percent") +
+
+  geom_histogram(aes(y=(..count..)/sum(..count..))) 
+
+
+ggplot(data=df_Attrition2, aes(x=YearsWithCurrManager, fill=Attrition)) + ylab("Percent") +
+
+  geom_histogram(aes(y=(..count..)/sum(..count..))) 
+  
+
+ggplot(data=df_Attrition2, aes(x=DistanceFromHome, fill=Attrition)) + ylab("Percent") +
+
+  geom_histogram(aes(y=(..count..)/sum(..count..))) 
+
+
+
+ggplot(data=df_Attrition2, aes(x=MonthlyRate, fill=Attrition)) + ylab("Percent") +
+
+  geom_histogram(aes(y=(..count..)/sum(..count..))) 
+
+
+
+ggplot(data=df_Attrition2, aes(x=YearsAtCompany, fill=Attrition)) + ylab("Percent") +
+
+  geom_histogram(aes(y=(..count..)/sum(..count..))) 
+
+
+
+ggplot(data=df_Attrition2, aes(x=YearsInCurrentRole, fill=Attrition)) + ylab("Percent") +
+
+  geom_histogram(aes(y=(..count..)/sum(..count..))) 
+
+```
+
+
+
+####Observations
+
+- The attrition rate appears to increase the more an employee feels they have to travel
+
+- The Sales department has the highest attrition rate (21.6%) followed by HR (17.1%) and R&D (13.3%).
+
+- Within these departments, Managers and Directors have the lowest attrition rates.
+
+- This is inline with the overtime attrition rates as employees who work overtime (non-expempt) have a higher attrition rate of 31.2% compared to 9.7% for those who are salaried (typicaly upper level management).
+
+- Attrition is also highest for employees in lower job levels.  
+
+- Oddly, attrition rates are highest with employees who either have the highest (21.8%) or lowest (25.9%) stock options available (levels 0 and 3), with the middle levels both having attrition rates less than 10%.
+
+- Interestingly Divorces employees have the lowest attrition rate at 6.2%, whereas 26% of employees who are single do not choose to stay with the company.
+
+- An employee's environment only appears to increase attrition when rated as most unsatisfactory. This trend also applys to employees who feel like they have a poor work life balance.
+
+- Attrition also appears to increase as Job Involvement Increases (assuming scores range from 1 as little to no involvement to 4 as High Involvement) and decrease as Job Satisfaction increases.  
+
+
+
+
+
+##Classifing Attrition: Naive Bayes Model
+
+```{r }
+
+library(caret)
+
+#Partitioning Dataset
+
+set.seed(7)
+
+trainIndex <- createDataPartition(df_Attrition2$Attrition, p=0.6)$Resample1
+
+train <- df_Attrition2[trainIndex, -c(33) ]
+
+test <- df_Attrition2[-trainIndex,-c(33) ]
+dim(train)
+dim(test)
+
+#Checking Totals
+
+print(table(df_Attrition2$Attrition))
+
+print(table(train$Attrition))
+
+
+
+#Creating Classifier
+
+library(e1071)
+
+
+
+printALL <- function(model){
+
+  trainPred <- predict(model, newdata = train, type = "class")
+
+  trainTable <- table(train$Attrition, trainPred)
+
+  testPred <- predict(Classifier_Model, newdata=test, type="class")
+
+  testTable <- table(test$Attrition, testPred)
+
+  trainAcc <- (trainTable[1,1]+trainTable[2,2])/sum(trainTable)
+
+  testAcc <- (testTable[1,1]+testTable[2,2])/sum(testTable)
+
+  message("Contingency Table for Training Data")
+
+  print(trainTable)
+
+  message("Contingency Table for Test Data")
+
+  print(testTable)
+
+  message("Accuracy")
+
+  print(round(cbind(trainAccuracy=trainAcc, testAccuracy=testAcc),3))
+
+  message("Training Sensitivity") #Need at least 0.6
+
+  print(trainTable[1,1]/(trainTable[1,1]+trainTable[2,1]))
+
+  message("Test Sensitivity") #Need at least 0.6
+
+  print(testTable[1,1]/(testTable[1,1]+testTable[2,1]))
+
+  message("Training Specificity") #Need at least 0.6
+
+  print(trainTable[2,2]/(trainTable[1,2]+trainTable[2,2]))
+
+  message("Test Specificity") #Need at least 0.6
+
+  print(testTable[2,2]/(testTable[1,2]+testTable[2,2]))
+
+}
+
+
+
+#Building Classifier Models
+
+#All in Model
+
+NB_Classfier1 <- naiveBayes(Attrition~., data=train)
+
+print(NB_Classfier1)
+
+Classifier_Model <- NB_Classfier1 #Change for each new model
+
+printALL(Classifier_Model)
+
+
+
+#Model2
+
+#Removing DailyRate, Department, Gender, PerformanceRating, RelationshipSatisfaction due to low variance.
+
+#Removing Age, MonthlyRate, TotalWorkingYears due to high correlation with mulitple other variables
+
+NB_Classfier2 <- naiveBayes(Attrition~BusinessTravel+ DistanceFromHome+ Education+ EducationField+ EnvironmentSatisfaction+ HourlyRate+ JobInvolvement+ JobLevel+ JobRole+ JobSatisfaction+ MaritalStatus+ MonthlyIncome+ NumCompaniesWorked+ OverTime+ PercentSalaryHike+ StockOptionLevel+ TrainingTimesLastYear+ WorkLifeBalance+ YearsAtCompany+ YearsInCurrentRole+ YearsSinceLastPromotion+ YearsWithCurrManager, data=train)
+
+print(NB_Classfier2)
+
+Classifier_Model <- NB_Classfier2 #Change for each new model
+
+printALL(Classifier_Model)
+
+
+
+#Model3
+
+#Adding All Variables with Significant Difference in Attrition
+
+NB_Classfier3 <- naiveBayes(Attrition~BusinessTravel + Department + JobRole + MaritalStatus + OverTime + EnvironmentSatisfaction + JobInvolvement + JobLevel + JobSatisfaction + StockOptionLevel + WorkLifeBalance + Age + DistanceFromHome + TotalWorkingYears + YearsAtCompany + YearsInCurrentRole, data=train)
+
+print(NB_Classfier3)
+
+Classifier_Model <- NB_Classfier3 #Change for each new model
+
+printALL(Classifier_Model)
+
+
+
+#Model4
+
+#Adding All Variables with Significant Difference in Attrition
+
+#But, removing TotalWorkingYears and YearsAtCompany YearsInCurrentRole as they are both highly correlated with each other and can possibly be explained by Age and YearsInCurrentRole 
+
+NB_Classfier4 <- naiveBayes(Attrition~BusinessTravel + Department + JobRole + MaritalStatus + OverTime + EnvironmentSatisfaction + JobInvolvement + JobLevel + JobSatisfaction + StockOptionLevel + WorkLifeBalance + Age + DistanceFromHome  , data=train)
+
+print(NB_Classfier4)
+
+Classifier_Model <- NB_Classfier4 #Change for each new model
+
+printALL(Classifier_Model)
+
+```
+
+
+#Model5 ### Predict **Attrition** using KNN Classification:  
+
+Create training and test sets from the data (60%/40% split respectively):  
+
+```{r}
+
+TrainObs = sample(seq(1,dim(df_Attrition2)[1]),round(.60*dim(df_Attrition2)[1]),replace = FALSE)
+
+TrainingData = df_Attrition2[TrainObs,]
+
+TestData = df_Attrition2[-TrainObs,]
+
+```
+
+# Using class package's KNN function
+```{r}
+results = class::knn(TrainingData[, c(6,7,12,13,14,19,20,25)], TestData[, c(6, 7,12,13,14,19,20,25)], TrainingData$Attrition, k = 3)
+
+TestData$Pred_Attrition = results
+
+```
+#Create a confusion matrix to estimate the accuracy, sensitivity and specificity of the model:
+
+```{r}
+
+confusionMatrix(table(TestData$Attrition, TestData$Pred_Attrition))
+cMatrix<-table(TestData$Pred_Attrition, TestData$Attrition)
+plot(cMatrix,ylab="Actual", xlab="Predicted", 'KNN Confusion Matrix')
+
+```
+
+
+####Model 4 is the best classification model and will be used for identifying attrition.
+
+- This model is 87.7% accurate on the training set and 87.1% accurate on the test set.
+
+- The training set sensitivity (ability to correctly classify true attrition) is 65.1% and 64.1% for the test set.
+
+- The training set specificity (ability to correctly classify employees who've stayed) is 91% and 90%  for the test set.
+
+- Given that the overall attrition rate is only 16%, it is important to be able to accurately classify employees who have truely left the company as a KNN or Random Forest model could also produce high specificity. 
+
+
+
+##Predicting Attrition for Validation Dataset
+
+```{r }
+
+#Predicting Attrition for Validation Data
+
+Predicted_Attr <- predict(Classifier_Model,newdata = df_AttritionPrediction,type = 'class')
+
+df_AttritionPrediction$Attrition <- Predicted_Attr
+
+head(df_AttritionPrediction)
+
+dim(df_AttritionPrediction)
+
+
+#Exporting Results to .csv
+
+write.csv(df_AttritionPrediction[,c(1,33)],"C:/SMU/DoingDatascience/Casestudy2/Case2PredictionsBhatia Attrition.csv")
+
+```
+
+
+
+##Linear Regression: Predicting Montly Income
+
+```{r }
+
+
+
+library(caret)
+
+library(leaps)
+
+
+
+#Fit full linear model
+
+LinearModel <- lm(MonthlyIncome ~ ., train)
+
+summary(LinearModel)
+
+
+
+#Model Selction: Forward, Backward, Stepwise
+
+TrainControl <- trainControl(method = "cv", number = 10)
+
+
+
+# Backward Selection
+
+BackwardModel <- train(MonthlyIncome ~., data = train, method = "leapBackward", trControl = TrainControl)     
+
+BackwardModel$results #includes RMSE
+
+BackwardPredict <- predict(BackwardModel, newdata = test)
+
+test$BackwardPredict <- BackwardPredict
+
+
+
+# Forward Selection
+
+ForwardModel <- train(MonthlyIncome ~., data = train, method = "leapForward", trControl = TrainControl)
+
+ForwardModel$results #includes RMSE
+
+ForwardPredict <- predict(ForwardModel, newdata = test)
+
+test$ForwardPredict <- ForwardPredict
+
+
+
+# Stepwise Selection
+
+StepwiseModel <- train(MonthlyIncome ~., data = train, method = "leapSeq", trControl = TrainControl)
+
+StepwiseModel$results #includes RMSE
+
+StepwisePredict <- predict(StepwiseModel, newdata = test)
+
+test$StepwisePredict <- StepwisePredict
+
+
+
+
+
+#Calculating ASE stats for each model
+
+ASEholderForward = c()
+
+ASEholderBackward = c()
+
+ASEholderStepwise = c()
+
+
+
+ASEholderForward = sum((test$ForwardPredict - test$MonthlyIncome)^2)/length(test$MonthlyIncome)
+
+ASEholderBackward = sum((test$BackwardPredict - test$MonthlyIncome)^2)/length(test$MonthlyIncome)
+
+ASEholderStepwise = sum((test$StepwisePredict - test$MonthlyIncome)^2)/length(test$MonthlyIncome)
+
+
+
+#ASE Stats
+
+ASEholderForward
+
+ASEholderBackward
+
+ASEholderStepwise
+
+
+
+#RMSE Stats
+
+BackwardModel$results
+
+ForwardModel$results
+
+StepwiseModel$results
+
+```
+
+####Backward Selection has lowest RMSE and ASE and will be used on the Validation Dataset.
+
+
+
+##Predicting Montly Income for Validation Dataset
+
+```{r }
+
+#Predicting Income for Validation Data
+
+Final_Predictions <- predict(BackwardModel, newdata = df_IncomePrediction)
+
+df_IncomePrediction$MonthlyIncome <- Final_Predictions
+
+head(df_IncomePrediction)
+
+dim(df_IncomePrediction)
+
+#Exporting Results to .csv
+
+write.csv(df_IncomePrediction[,c(1,33)],"C:/SMU/DoingDatascience/Casestudy2/Case2PredictionsBhatia Salary.csv")
+
+```
